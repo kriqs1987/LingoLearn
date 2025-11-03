@@ -1,4 +1,3 @@
-
 export interface Word {
   id: string;
   english: string;
@@ -10,6 +9,7 @@ export interface Word {
 }
 
 export enum AppView {
+  LOGIN = 'LOGIN',
   DASHBOARD = 'DASHBOARD',
   QUIZ = 'QUIZ',
   MANAGE_WORDS = 'MANAGE_WORDS',
@@ -19,4 +19,8 @@ export interface QuizQuestion {
   word: Word;
   options: string[]; // array of translations
   correctAnswer: string;
+}
+
+export interface User {
+  username: string;
 }

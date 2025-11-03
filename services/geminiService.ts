@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
@@ -9,11 +8,11 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-export async function fetchWordDetails(word: string): Promise<{ translation: string; definition: string; exampleSentence: string; }> {
+export async function fetchWordDetails(word: string, targetLanguage: string): Promise<{ translation: string; definition: string; exampleSentence: string; }> {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `For the English word "${word}", provide a simple definition for an A1-level English learner, its Polish translation, and one example sentence.`,
+      contents: `For the English word "${word}", provide a simple definition for an A1-level English learner, its ${targetLanguage} translation, and one example sentence.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -21,7 +20,7 @@ export async function fetchWordDetails(word: string): Promise<{ translation: str
           properties: {
             translation: {
               type: Type.STRING,
-              description: "The Polish translation of the word."
+              description: `The ${targetLanguage} translation of the word.`
             },
             definition: {
               type: Type.STRING,

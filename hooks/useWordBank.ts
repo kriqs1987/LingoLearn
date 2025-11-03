@@ -1,41 +1,69 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Word } from '../types';
 import { LOCAL_STORAGE_KEY, MAX_MASTERY_LEVEL, QUIZ_SESSION_LENGTH } from '../constants';
 
-export function useWordBank() {
-  const [words, setWords] = useState<Word[]>(() => {
+// Data structure in localStorage:
+// {
+//   "user1": {
+//     "Polish": [word1, word2],
+//     "Spanish": [word3]
+//   }
+// }
+
+const getAllData = () => {
     try {
-      const item = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      return item ? JSON.parse(item) : [];
+        const item = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        return item ? JSON.parse(item) : {};
     } catch (error) {
-      console.error("Error reading from localStorage", error);
-      return [];
+        console.error("Error reading from localStorage", error);
+        return {};
     }
-  });
+};
+
+export function useWordBank(username: string | null, language: string) {
+  const [words, setWords] = useState<Word[]>([]);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(words));
-    } catch (error) {
-      console.error("Error writing to localStorage", error);
+    if (!username) {
+        setWords([]);
+        return;
     }
-  }, [words]);
+    const allData = getAllData();
+    const userWords = allData[username] || {};
+    const languageWords = userWords[language] || [];
+    setWords(languageWords);
+  }, [username, language]);
+
+  useEffect(() => {
+    if (!username || !language) return;
+    
+    try {
+        const allData = getAllData();
+        if (!allData[username]) {
+            allData[username] = {};
+        }
+        allData[username][language] = words;
+        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(allData));
+    } catch (error) {
+        console.error("Error writing to localStorage", error);
+    }
+  }, [words, username, language]);
 
   const addWord = useCallback((wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
-    const alreadyExists = words.some(w => w.english.toLowerCase() === wordDetails.english.toLowerCase());
-    if (alreadyExists) {
-      throw new Error(`The word "${wordDetails.english}" is already in your list.`);
-    }
-    
-    const newWord: Word = {
-      ...wordDetails,
-      id: new Date().toISOString() + Math.random(),
-      masteryLevel: 0,
-      lastReviewed: null,
-    };
-    setWords(prevWords => [newWord, ...prevWords]);
-  }, [words]);
+    setWords(prevWords => {
+      const alreadyExists = prevWords.some(w => w.english.toLowerCase() === wordDetails.english.toLowerCase());
+      if (alreadyExists) {
+        throw new Error(`The word "${wordDetails.english}" is already in your list for this language.`);
+      }
+      const newWord: Word = {
+        ...wordDetails,
+        id: `${new Date().toISOString()}-${wordDetails.english}`,
+        masteryLevel: 0,
+        lastReviewed: null,
+      };
+      return [newWord, ...prevWords];
+    });
+  }, []);
 
   const updateWordMastery = useCallback((wordId: string, isCorrect: boolean) => {
     setWords(prevWords =>
@@ -70,7 +98,6 @@ export function useWordBank() {
   }, []);
   
   const getWordsForQuiz = useCallback(() => {
-    // Simple SRS: prioritize words with lowest mastery, then least recently reviewed
     const sortedWords = [...words].sort((a, b) => {
       if (a.masteryLevel !== b.masteryLevel) {
         return a.masteryLevel - b.masteryLevel;
