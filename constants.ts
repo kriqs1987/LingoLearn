@@ -3,15 +3,7 @@ export const QUIZ_SESSION_LENGTH = 5;
 export const LOCAL_STORAGE_KEY = 'lingoLearnData';
 
 export const SUPPORTED_LANGUAGES = [
+    "Norwegian",
     "English",
-    "Polish",
-    "Spanish",
-    "German",
-    "French",
-    "Italian",
-    "Portuguese",
-    "Russian",
-    "Japanese",
-    "Chinese (Simplified)",
-    "Arabic"
+    "Romanian"
 ];
