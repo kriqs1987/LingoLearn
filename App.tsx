@@ -1,29 +1,30 @@
-import React, { useState, useCallback, useContext } from 'react';
+import React, { useState, useCallback } from 'react';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
 import ManageWordsView from './components/ManageWordsView';
 import NavBar from './components/NavBar';
-import LoginView from './components/LoginView';
-import LanguageSelector from './components/LanguageSelector';
-import { AppView, QuizQuestion, User } from './types';
+import ImportModal from './components/ImportModal';
+import { AppView, QuizQuestion, Dictionary } from './types';
 import { fetchWordDetails } from './services/geminiService';
 import { useWordBank } from './hooks/useWordBank';
-import { AuthContext, AuthProvider } from './contexts/AuthContext';
 import { SUPPORTED_LANGUAGES } from './constants';
-import { LogoutIcon } from './components/Icons';
 
-const AppContent: React.FC = () => {
-  const { user, logout } = useContext(AuthContext);
+const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
-  const [currentLanguage, setCurrentLanguage] = useState(SUPPORTED_LANGUAGES[0]);
-  
+  const [targetLanguage, setTargetLanguage] = useState(SUPPORTED_LANGUAGES[0]);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuizResult, setLastQuizResult] = useState<{correct: number, total: number} | null>(null);
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
 
   const {
+    dictionaries,
+    activeDictionary,
+    createDictionary,
+    deleteDictionary,
+    setActiveDictionary,
     words,
     addWord,
     updateWordMastery,
@@ -32,13 +33,18 @@ const AppContent: React.FC = () => {
     maxPossibleMastery,
     deleteWord,
     updateWord,
-  } = useWordBank(user?.username || null, currentLanguage);
+    importWords,
+  } = useWordBank();
 
   const handleAddNewWord = useCallback(async (word: string) => {
+    if (!activeDictionary) {
+        setError("Please select a dictionary first.");
+        return;
+    }
     setIsLoading(true);
     setError(null);
     try {
-      const details = await fetchWordDetails(word, currentLanguage);
+      const details = await fetchWordDetails(word, targetLanguage);
       addWord({
         english: word,
         ...details
@@ -48,7 +54,7 @@ const AppContent: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [addWord, currentLanguage]);
+  }, [addWord, targetLanguage, activeDictionary]);
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     return array.sort(() => Math.random() - 0.5);
@@ -87,10 +93,6 @@ const AppContent: React.FC = () => {
     setLastQuizResult(null);
     setCurrentView(view);
   }
-
-  if (!user) {
-    return <LoginView />;
-  }
   
   const renderContent = () => {
     switch(currentView) {
@@ -101,19 +103,23 @@ const AppContent: React.FC = () => {
             totalMastery={totalMastery}
             maxPossibleMastery={maxPossibleMastery}
             onStartQuiz={handleStartQuiz}
-            username={user.username}
-            currentLanguage={currentLanguage}
+            activeDictionaryName={activeDictionary?.name || null}
           />
         );
       case AppView.MANAGE_WORDS:
         return (
           <ManageWordsView
-            words={words}
+            dictionaries={dictionaries}
+            activeDictionary={activeDictionary}
+            createDictionary={createDictionary}
+            deleteDictionary={deleteDictionary}
+            setActiveDictionary={setActiveDictionary}
             onAddWord={handleAddNewWord}
             onDeleteWord={deleteWord}
             onUpdateWord={updateWord}
             isLoading={isLoading}
             error={error}
+            onOpenImportModal={() => setImportModalOpen(true)}
           />
         );
       case AppView.QUIZ:
@@ -131,15 +137,7 @@ const AppContent: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
-      <Header>
-          <LanguageSelector
-            currentLanguage={currentLanguage}
-            onLanguageChange={setCurrentLanguage}
-          />
-          <button onClick={logout} className="p-2 text-slate-500 hover:text-red-500 transition-colors" aria-label="Logout">
-              <LogoutIcon className="w-6 h-6" />
-          </button>
-      </Header>
+      <Header />
       <main className="container mx-auto p-4 md:p-6 pb-20">
         {lastQuizResult && currentView === AppView.DASHBOARD && (
           <div className="bg-sky-100 dark:bg-sky-900 border-l-4 border-sky-500 text-sky-700 dark:text-sky-200 p-4 rounded-lg mb-6" role="alert">
@@ -152,15 +150,16 @@ const AppContent: React.FC = () => {
       {currentView !== AppView.QUIZ && (
          <NavBar currentView={currentView} onNavigate={handleNavigate} />
       )}
+      {isImportModalOpen && activeDictionary && (
+        <ImportModal
+            dictionaryName={activeDictionary.name}
+            onClose={() => setImportModalOpen(false)}
+            onImport={importWords}
+            targetLanguage={targetLanguage}
+        />
+      )}
     </div>
   );
 };
-
-const App: React.FC = () => (
-    <AuthProvider>
-        <AppContent />
-    </AuthProvider>
-);
-
 
 export default App;

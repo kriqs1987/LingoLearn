@@ -1,11 +1,7 @@
 import React from 'react';
 import { BookOpenIcon } from './Icons';
 
-interface HeaderProps {
-    children?: React.ReactNode;
-}
-
-const Header: React.FC<HeaderProps> = ({ children }) => {
+const Header: React.FC = () => {
   return (
     <header className="bg-white dark:bg-slate-800 shadow-md sticky top-0 z-20">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -14,9 +10,6 @@ const Header: React.FC<HeaderProps> = ({ children }) => {
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
             LingoLearn
             </h1>
-        </div>
-        <div className="flex items-center gap-4">
-            {children}
         </div>
       </div>
     </header>

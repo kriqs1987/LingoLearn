@@ -1,80 +1,114 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Word } from '../types';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Word, Dictionary } from '../types';
 import { LOCAL_STORAGE_KEY, MAX_MASTERY_LEVEL, QUIZ_SESSION_LENGTH } from '../constants';
+import { fetchWordDetails } from '../services/geminiService';
 
-// Data structure in localStorage:
-// {
-//   "user1": {
-//     "Polish": [word1, word2],
-//     "Spanish": [word3]
-//   }
-// }
+interface LingoLearnData {
+    dictionaries: Dictionary[];
+    activeDictionaryId: string | null;
+}
 
-const getAllData = () => {
+const getInitialData = (): LingoLearnData => {
     try {
         const item = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-        return item ? JSON.parse(item) : {};
+        if (item) {
+            const data = JSON.parse(item);
+            // Basic validation
+            if (Array.isArray(data.dictionaries)) {
+                return data;
+            }
+        }
     } catch (error) {
         console.error("Error reading from localStorage", error);
-        return {};
     }
+    // Return default structure if no valid data found
+    return { dictionaries: [], activeDictionaryId: null };
 };
 
-export function useWordBank(username: string | null, language: string) {
-  const [words, setWords] = useState<Word[]>([]);
+
+export function useWordBank() {
+  const [data, setData] = useState<LingoLearnData>(getInitialData);
 
   useEffect(() => {
-    if (!username) {
-        setWords([]);
-        return;
-    }
-    const allData = getAllData();
-    const userWords = allData[username] || {};
-    const languageWords = userWords[language] || [];
-    setWords(languageWords);
-  }, [username, language]);
-
-  useEffect(() => {
-    if (!username || !language) return;
-    
     try {
-        const allData = getAllData();
-        if (!allData[username]) {
-            allData[username] = {};
-        }
-        allData[username][language] = words;
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(allData));
+        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
         console.error("Error writing to localStorage", error);
     }
-  }, [words, username, language]);
+  }, [data]);
 
-  const addWord = useCallback((wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
-    setWords(prevWords => {
-      const alreadyExists = prevWords.some(w => w.english.toLowerCase() === wordDetails.english.toLowerCase());
-      if (alreadyExists) {
-        throw new Error(`The word "${wordDetails.english}" is already in your list for this language.`);
-      }
-      const newWord: Word = {
-        ...wordDetails,
-        id: `${new Date().toISOString()}-${wordDetails.english}`,
-        masteryLevel: 0,
-        lastReviewed: null,
-      };
-      return [newWord, ...prevWords];
+  const activeDictionary = useMemo(() => {
+    return data.dictionaries.find(d => d.id === data.activeDictionaryId) || null;
+  }, [data.dictionaries, data.activeDictionaryId]);
+
+  const createDictionary = useCallback((name: string) => {
+    const newDictionary: Dictionary = {
+        id: new Date().toISOString(),
+        name,
+        words: [],
+    };
+    setData(prevData => {
+        const newData = {
+            ...prevData,
+            dictionaries: [...prevData.dictionaries, newDictionary],
+        };
+        // If it's the first dictionary, make it active
+        if (prevData.dictionaries.length === 0) {
+            newData.activeDictionaryId = newDictionary.id;
+        }
+        return newData;
     });
   }, []);
 
+  const deleteDictionary = useCallback((dictionaryId: string) => {
+    setData(prevData => {
+        const newDictionaries = prevData.dictionaries.filter(d => d.id !== dictionaryId);
+        let newActiveId = prevData.activeDictionaryId;
+        // If the deleted dictionary was active, select the first one or null
+        if (newActiveId === dictionaryId) {
+            newActiveId = newDictionaries.length > 0 ? newDictionaries[0].id : null;
+        }
+        return { dictionaries: newDictionaries, activeDictionaryId: newActiveId };
+    });
+  }, []);
+  
+  const setActiveDictionary = useCallback((dictionaryId: string | null) => {
+    setData(prevData => ({ ...prevData, activeDictionaryId: dictionaryId }));
+  }, []);
+
+  const updateActiveDictionaryWords = (updateFn: (words: Word[]) => Word[]) => {
+    if (!data.activeDictionaryId) return;
+    setData(prevData => ({
+        ...prevData,
+        dictionaries: prevData.dictionaries.map(d => 
+            d.id === data.activeDictionaryId ? { ...d, words: updateFn(d.words) } : d
+        )
+    }));
+  };
+
+  const addWord = useCallback((wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
+    if (!activeDictionary) return;
+    const alreadyExists = activeDictionary.words.some(w => w.english.toLowerCase() === wordDetails.english.toLowerCase());
+    if (alreadyExists) {
+      throw new Error(`The word "${wordDetails.english}" is already in this dictionary.`);
+    }
+    
+    const newWord: Word = {
+      ...wordDetails,
+      id: `${new Date().toISOString()}-${wordDetails.english}`,
+      masteryLevel: 0,
+      lastReviewed: null,
+    };
+    updateActiveDictionaryWords(prevWords => [newWord, ...prevWords]);
+  }, [activeDictionary]);
+
   const updateWordMastery = useCallback((wordId: string, isCorrect: boolean) => {
-    setWords(prevWords =>
+    updateActiveDictionaryWords(prevWords =>
       prevWords.map(word => {
         if (word.id === wordId) {
-          let newMasteryLevel = word.masteryLevel;
-          if (isCorrect) {
-            newMasteryLevel = Math.min(MAX_MASTERY_LEVEL, word.masteryLevel + 1);
-          } else {
-            newMasteryLevel = Math.max(0, word.masteryLevel - 1);
-          }
+          const newMasteryLevel = isCorrect
+            ? Math.min(MAX_MASTERY_LEVEL, word.masteryLevel + 1)
+            : Math.max(0, word.masteryLevel - 1);
           return { ...word, masteryLevel: newMasteryLevel, lastReviewed: new Date().toISOString() };
         }
         return word;
@@ -83,34 +117,98 @@ export function useWordBank(username: string | null, language: string) {
   }, []);
 
   const deleteWord = useCallback((wordId: string) => {
-    setWords(prevWords => prevWords.filter(word => word.id !== wordId));
+    updateActiveDictionaryWords(prevWords => prevWords.filter(word => word.id !== wordId));
   }, []);
 
   const updateWord = useCallback((wordId: string, updatedDetails: { translation: string; exampleSentence: string; }) => {
-    setWords(prevWords =>
-      prevWords.map(word => {
-        if (word.id === wordId) {
-          return { ...word, ...updatedDetails };
-        }
-        return word;
-      })
+    updateActiveDictionaryWords(prevWords =>
+      prevWords.map(word => 
+        word.id === wordId ? { ...word, ...updatedDetails } : word
+      )
     );
   }, []);
   
   const getWordsForQuiz = useCallback(() => {
-    const sortedWords = [...words].sort((a, b) => {
-      if (a.masteryLevel !== b.masteryLevel) {
-        return a.masteryLevel - b.masteryLevel;
-      }
+    if (!activeDictionary) return [];
+    const sortedWords = [...activeDictionary.words].sort((a, b) => {
+      if (a.masteryLevel !== b.masteryLevel) return a.masteryLevel - b.masteryLevel;
       if (!a.lastReviewed) return -1;
       if (!b.lastReviewed) return 1;
       return new Date(a.lastReviewed).getTime() - new Date(b.lastReviewed).getTime();
     });
     return sortedWords.slice(0, QUIZ_SESSION_LENGTH);
-  }, [words]);
+  }, [activeDictionary]);
 
+  const importWords = useCallback(async (
+    wordListText: string,
+    targetLanguage: string,
+    onProgress: (progress: { current: number; total: number; word: string }) => void
+  ): Promise<{ successful: number; failed: number, errors: string[] }> => {
+      if (!activeDictionary) throw new Error("No active dictionary to import words into.");
+
+      const wordsToImport = wordListText.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
+      const uniqueWords = [...new Set(wordsToImport)];
+      const wordsToAdd: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>[] = [];
+      
+      let successful = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < uniqueWords.length; i++) {
+          const word = uniqueWords[i];
+          onProgress({ current: i + 1, total: uniqueWords.length, word });
+          
+          if (activeDictionary.words.some(w => w.english.toLowerCase() === word)) {
+              console.log(`Skipping duplicate: ${word}`);
+              continue; // Skip words already in the dictionary
+          }
+
+          try {
+              const details = await fetchWordDetails(word, targetLanguage);
+              wordsToAdd.push({ english: word, ...details });
+              successful++;
+          } catch (error: any) {
+              console.error(`Failed to import "${word}":`, error);
+              failed++;
+              errors.push(`"${word}": ${error.message || 'Unknown error'}`);
+          }
+      }
+
+      if (wordsToAdd.length > 0) {
+        updateActiveDictionaryWords(prevWords => {
+          const newWords: Word[] = wordsToAdd.map(details => ({
+            ...details,
+            id: `${new Date().toISOString()}-${details.english}`,
+            masteryLevel: 0,
+            lastReviewed: null,
+          }));
+          return [...newWords, ...prevWords];
+        });
+      }
+      
+      return { successful, failed, errors };
+
+  }, [activeDictionary]);
+
+
+  const words = activeDictionary?.words || [];
   const totalMastery = words.reduce((sum, word) => sum + word.masteryLevel, 0);
   const maxPossibleMastery = words.length * MAX_MASTERY_LEVEL;
 
-  return { words, addWord, updateWordMastery, getWordsForQuiz, totalMastery, maxPossibleMastery, deleteWord, updateWord };
+  return { 
+    dictionaries: data.dictionaries,
+    activeDictionary,
+    createDictionary,
+    deleteDictionary,
+    setActiveDictionary,
+    words,
+    addWord,
+    updateWordMastery,
+    getWordsForQuiz,
+    totalMastery,
+    maxPossibleMastery,
+    deleteWord,
+    updateWord,
+    importWords
+  };
 }

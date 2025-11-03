@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { AppView } from '../types';
-import { BrainCircuitIcon, ListBulletIcon } from './Icons';
+import { BrainCircuitIcon, FolderIcon } from './Icons';
 
 interface NavBarProps {
   currentView: AppView;
@@ -45,12 +44,12 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, onNavigate }) => {
           <BrainCircuitIcon className="w-6 h-6" />
         </NavButton>
         <NavButton
-          label="Word Bank"
+          label="Dictionaries"
           view={AppView.MANAGE_WORDS}
           currentView={currentView}
           onNavigate={onNavigate}
         >
-          <ListBulletIcon className="w-6 h-6" />
+          <FolderIcon className="w-6 h-6" />
         </NavButton>
       </div>
     </nav>

@@ -1,12 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.warn("API_KEY is not set. Please set it in your environment variables.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// FIX: Per coding guidelines, the API key must be obtained exclusively from
+// process.env.API_KEY and used directly. The previous check has been removed.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function fetchWordDetails(word: string, targetLanguage: string): Promise<{ translation: string; definition: string; exampleSentence: string; }> {
   try {

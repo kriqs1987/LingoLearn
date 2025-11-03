@@ -8,8 +8,13 @@ export interface Word {
   lastReviewed: string | null; // ISO date string
 }
 
+export interface Dictionary {
+  id: string;
+  name: string;
+  words: Word[];
+}
+
 export enum AppView {
-  LOGIN = 'LOGIN',
   DASHBOARD = 'DASHBOARD',
   QUIZ = 'QUIZ',
   MANAGE_WORDS = 'MANAGE_WORDS',
@@ -21,6 +26,7 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
+// FIX: Add User interface to resolve import error in contexts/AuthContext.tsx.
 export interface User {
   username: string;
 }
