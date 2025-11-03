@@ -5,5 +5,6 @@ export const LOCAL_STORAGE_KEY = 'lingoLearnData';
 export const SUPPORTED_LANGUAGES = [
     "Norwegian",
     "English",
-    "Romanian"
+    "Romanian",
+    "Polish"
 ];
