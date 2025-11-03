@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { QuizQuestion, Word } from '../types';
+import { QuizQuestion } from '../types';
 import { CheckIcon, XIcon } from './Icons';
 
 interface QuizViewProps {
@@ -16,18 +15,16 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
   const [answerState, setAnswerState] = useState<AnswerState>('unanswered');
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [correctAnswers, setCorrectAnswers] = useState(0);
-  
+
   const currentQuestion = quizQuestions[currentQuestionIndex];
 
   useEffect(() => {
-    // Reset state when question changes
     setAnswerState('unanswered');
     setSelectedAnswer(null);
   }, [currentQuestionIndex]);
 
   const handleAnswerClick = (option: string) => {
     if (answerState !== 'unanswered') return;
-
     const isCorrect = option === currentQuestion.correctAnswer;
     setSelectedAnswer(option);
 
@@ -82,7 +79,7 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
             key={option}
             onClick={() => handleAnswerClick(option)}
             disabled={answerState !== 'unanswered'}
-            className={`p-4 rounded-lg text-lg font-semibold border-2 border-slate-200 dark:border-slate-600 w-full text-left transition duration-300 ease-in-out flex items-center justify-between ${getButtonClass(option)}`}
+            className={`p-4 rounded-lg border-2 w-full text-lg font-semibold text-left transition duration-300 ease-in-out flex justify-between items-center ${getButtonClass(option)} ${answerState !== 'unanswered' ? 'border-transparent' : 'border-slate-200 dark:border-slate-600'}`}
           >
             <span>{option}</span>
             {answerState !== 'unanswered' && option === currentQuestion.correctAnswer && <CheckIcon className="w-6 h-6" />}
