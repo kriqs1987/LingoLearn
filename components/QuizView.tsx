@@ -73,7 +73,7 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
 
       <div className="text-center space-y-2">
         <p className="text-lg text-slate-600 dark:text-slate-300">What is the translation of:</p>
-        <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white">{currentQuestion.word.english}</h2>
+        <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white">{currentQuestion.word.sourceWord}</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -4,30 +4,30 @@ import { GoogleGenAI, Type } from "@google/genai";
 // process.env.API_KEY and used directly. The previous check has been removed.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export async function fetchWordDetails(word: string, targetLanguage: string): Promise<{ translation: string; definition: string; exampleSentence: string; }> {
+export async function fetchWordDetails(sourceWord: string, sourceLanguage: string, targetLanguage: string): Promise<{ translatedWord: string; definition: string; exampleSentence: string; }> {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `For the English word "${word}", provide a simple definition for an A1-level English learner, its ${targetLanguage} translation, and one example sentence.`,
+      contents: `For the ${sourceLanguage} word "${sourceWord}", provide a simple definition for an A1-level ${sourceLanguage} learner, its ${targetLanguage} translation, and one example sentence in ${sourceLanguage}.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            translation: {
+            translatedWord: {
               type: Type.STRING,
               description: `The ${targetLanguage} translation of the word.`
             },
             definition: {
               type: Type.STRING,
-              description: "A simple, A1-level definition of the word in English."
+              description: `A simple, A1-level definition of the word in ${sourceLanguage}.`
             },
             exampleSentence: {
               type: Type.STRING,
-              description: "An example sentence using the word."
+              description: `An example sentence in ${sourceLanguage} using the word.`
             }
           },
-          required: ["translation", "definition", "exampleSentence"]
+          required: ["translatedWord", "definition", "exampleSentence"]
         },
       },
     });

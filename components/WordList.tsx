@@ -36,8 +36,8 @@ const WordList: React.FC<WordListProps> = ({ words, onDelete, onEdit }) => {
       {words.map(word => (
         <div key={word.id} className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex-grow">
-            <p className="font-bold text-lg text-sky-800 dark:text-sky-300">{word.english}</p>
-            <p className="text-slate-600 dark:text-slate-400">{word.translation}</p>
+            <p className="font-bold text-lg text-sky-800 dark:text-sky-300">{word.sourceWord}</p>
+            <p className="text-slate-600 dark:text-slate-400">{word.translatedWord}</p>
             <p className="text-sm text-slate-500 dark:text-slate-500 italic mt-1">"{word.exampleSentence}"</p>
           </div>
           <div className="flex items-center gap-4 flex-shrink-0">
@@ -47,14 +47,14 @@ const WordList: React.FC<WordListProps> = ({ words, onDelete, onEdit }) => {
                 <button
                   onClick={() => onEdit(word)}
                   className="p-2 text-slate-500 hover:text-sky-500 transition-colors"
-                  aria-label={`Edit ${word.english}`}
+                  aria-label={`Edit ${word.sourceWord}`}
                 >
                   <PencilIcon className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => onDelete(word.id)}
                   className="p-2 text-slate-500 hover:text-red-500 transition-colors"
-                  aria-label={`Delete ${word.english}`}
+                  aria-label={`Delete ${word.sourceWord}`}
                 >
                   <TrashIcon className="w-5 h-5" />
                 </button>

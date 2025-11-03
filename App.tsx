@@ -12,7 +12,6 @@ import { SUPPORTED_LANGUAGES } from './constants';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
-  const [targetLanguage, setTargetLanguage] = useState(SUPPORTED_LANGUAGES[0]);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +43,10 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const details = await fetchWordDetails(word, targetLanguage);
+      const { sourceLanguage, targetLanguage } = activeDictionary;
+      const details = await fetchWordDetails(word, sourceLanguage, targetLanguage);
       addWord({
-        english: word,
+        sourceWord: word,
         ...details
       });
     } catch (e: any) {
@@ -54,7 +54,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [addWord, targetLanguage, activeDictionary]);
+  }, [addWord, activeDictionary]);
 
   const shuffleArray = <T,>(array: T[]): T[] => {
     return array.sort(() => Math.random() - 0.5);
@@ -66,15 +66,15 @@ const App: React.FC = () => {
       const questions = quizWords.map(wordToQuiz => {
         const distractors = words
           .filter(w => w.id !== wordToQuiz.id)
-          .map(w => w.translation);
+          .map(w => w.translatedWord);
         
         const shuffledDistractors = shuffleArray(distractors).slice(0, 3);
-        const options = shuffleArray([wordToQuiz.translation, ...shuffledDistractors]);
+        const options = shuffleArray([wordToQuiz.translatedWord, ...shuffledDistractors]);
         
         return {
           word: wordToQuiz,
           options,
-          correctAnswer: wordToQuiz.translation
+          correctAnswer: wordToQuiz.translatedWord
         };
       });
       setQuizQuestions(questions);
@@ -103,7 +103,7 @@ const App: React.FC = () => {
             totalMastery={totalMastery}
             maxPossibleMastery={maxPossibleMastery}
             onStartQuiz={handleStartQuiz}
-            activeDictionaryName={activeDictionary?.name || null}
+            activeDictionary={activeDictionary}
           />
         );
       case AppView.MANAGE_WORDS:
@@ -155,7 +155,6 @@ const App: React.FC = () => {
             dictionaryName={activeDictionary.name}
             onClose={() => setImportModalOpen(false)}
             onImport={importWords}
-            targetLanguage={targetLanguage}
         />
       )}
     </div>

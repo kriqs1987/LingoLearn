@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Dictionary } from '../types';
 import { PlusIcon, ArrowUpTrayIcon, TrashIcon } from './Icons';
+import { SUPPORTED_LANGUAGES } from '../constants';
 
 interface DictionaryManagerProps {
     dictionaries: Dictionary[];
     activeDictionaryId: string | null;
-    onCreateDictionary: (name: string) => void;
+    onCreateDictionary: (name: string, sourceLanguage: string, targetLanguage: string) => void;
     onDeleteDictionary: (id: string) => void;
     onSelectDictionary: (id: string | null) => void;
     onOpenImportModal: () => void;
@@ -20,11 +21,17 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
     onOpenImportModal
 }) => {
     const [newDictionaryName, setNewDictionaryName] = useState('');
+    const [sourceLanguage, setSourceLanguage] = useState(SUPPORTED_LANGUAGES[0]);
+    const [targetLanguage, setTargetLanguage] = useState(SUPPORTED_LANGUAGES[1]);
     
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
         if (newDictionaryName.trim()) {
-            onCreateDictionary(newDictionaryName.trim());
+            if (sourceLanguage === targetLanguage) {
+                alert("Source and target languages cannot be the same.");
+                return;
+            }
+            onCreateDictionary(newDictionaryName.trim(), sourceLanguage, targetLanguage);
             setNewDictionaryName('');
         }
     };
@@ -33,22 +40,48 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg space-y-4">
             <h2 className="text-xl font-bold">Manage Dictionaries</h2>
             
-            <form onSubmit={handleCreate} className="flex gap-2">
-                <input
-                    type="text"
-                    value={newDictionaryName}
-                    onChange={(e) => setNewDictionaryName(e.target.value)}
-                    placeholder="New dictionary name..."
-                    className="flex-grow bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none transition"
-                />
-                <button
-                    type="submit"
-                    className="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition disabled:bg-slate-400"
-                    disabled={!newDictionaryName.trim()}
-                    aria-label="Create new dictionary"
-                >
-                    <PlusIcon className="w-5 h-5" />
-                </button>
+            <form onSubmit={handleCreate} className="space-y-3">
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={newDictionaryName}
+                        onChange={(e) => setNewDictionaryName(e.target.value)}
+                        placeholder="New dictionary name..."
+                        className="flex-grow bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none transition"
+                    />
+                    <button
+                        type="submit"
+                        className="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition disabled:bg-slate-400"
+                        disabled={!newDictionaryName.trim()}
+                        aria-label="Create new dictionary"
+                    >
+                        <PlusIcon className="w-5 h-5" />
+                    </button>
+                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label htmlFor="source-lang" className="block text-sm font-medium text-slate-700 dark:text-slate-300">From</label>
+                        <select
+                            id="source-lang"
+                            value={sourceLanguage}
+                            onChange={(e) => setSourceLanguage(e.target.value)}
+                            className="mt-1 block w-full pl-3 pr-8 py-2 text-base border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-md bg-white dark:bg-slate-700"
+                        >
+                            {SUPPORTED_LANGUAGES.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="target-lang" className="block text-sm font-medium text-slate-700 dark:text-slate-300">To</label>
+                        <select
+                            id="target-lang"
+                            value={targetLanguage}
+                            onChange={(e) => setTargetLanguage(e.target.value)}
+                            className="mt-1 block w-full pl-3 pr-8 py-2 text-base border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-sky-500 focus:border-sky-500 rounded-md bg-white dark:bg-slate-700"
+                        >
+                            {SUPPORTED_LANGUAGES.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                        </select>
+                    </div>
+                </div>
             </form>
             
             {dictionaries.length > 0 && (

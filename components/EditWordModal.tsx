@@ -4,24 +4,24 @@ import { Word } from '../types';
 
 interface EditWordModalProps {
   word: Word;
-  onSave: (wordId: string, updatedDetails: { translation: string; exampleSentence: string; }) => void;
+  onSave: (wordId: string, updatedDetails: { translatedWord: string; exampleSentence: string; }) => void;
   onClose: () => void;
 }
 
 const EditWordModal: React.FC<EditWordModalProps> = ({ word, onSave, onClose }) => {
-  const [translation, setTranslation] = useState(word.translation);
+  const [translatedWord, setTranslatedWord] = useState(word.translatedWord);
   const [exampleSentence, setExampleSentence] = useState(word.exampleSentence);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(word.id, { translation, exampleSentence });
+    onSave(word.id, { translatedWord, exampleSentence });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-labelledby="edit-word-title" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
-          <h2 id="edit-word-title" className="text-xl font-bold">Edit "{word.english}"</h2>
+          <h2 id="edit-word-title" className="text-xl font-bold">Edit "{word.sourceWord}"</h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 text-2xl font-bold">&times;</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -31,8 +31,8 @@ const EditWordModal: React.FC<EditWordModalProps> = ({ word, onSave, onClose }) 
               <input
                 id="translation"
                 type="text"
-                value={translation}
-                onChange={(e) => setTranslation(e.target.value)}
+                value={translatedWord}
+                onChange={(e) => setTranslatedWord(e.target.value)}
                 className="mt-1 block w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500"
                 required
               />

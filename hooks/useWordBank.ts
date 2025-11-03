@@ -41,10 +41,12 @@ export function useWordBank() {
     return data.dictionaries.find(d => d.id === data.activeDictionaryId) || null;
   }, [data.dictionaries, data.activeDictionaryId]);
 
-  const createDictionary = useCallback((name: string) => {
+  const createDictionary = useCallback((name: string, sourceLanguage: string, targetLanguage: string) => {
     const newDictionary: Dictionary = {
         id: new Date().toISOString(),
         name,
+        sourceLanguage,
+        targetLanguage,
         words: [],
     };
     setData(prevData => {
@@ -88,14 +90,14 @@ export function useWordBank() {
 
   const addWord = useCallback((wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
     if (!activeDictionary) return;
-    const alreadyExists = activeDictionary.words.some(w => w.english.toLowerCase() === wordDetails.english.toLowerCase());
+    const alreadyExists = activeDictionary.words.some(w => w.sourceWord.toLowerCase() === wordDetails.sourceWord.toLowerCase());
     if (alreadyExists) {
-      throw new Error(`The word "${wordDetails.english}" is already in this dictionary.`);
+      throw new Error(`The word "${wordDetails.sourceWord}" is already in this dictionary.`);
     }
     
     const newWord: Word = {
       ...wordDetails,
-      id: `${new Date().toISOString()}-${wordDetails.english}`,
+      id: `${new Date().toISOString()}-${wordDetails.sourceWord}`,
       masteryLevel: 0,
       lastReviewed: null,
     };
@@ -120,7 +122,7 @@ export function useWordBank() {
     updateActiveDictionaryWords(prevWords => prevWords.filter(word => word.id !== wordId));
   }, []);
 
-  const updateWord = useCallback((wordId: string, updatedDetails: { translation: string; exampleSentence: string; }) => {
+  const updateWord = useCallback((wordId: string, updatedDetails: { translatedWord: string; exampleSentence: string; }) => {
     updateActiveDictionaryWords(prevWords =>
       prevWords.map(word => 
         word.id === wordId ? { ...word, ...updatedDetails } : word
@@ -141,11 +143,11 @@ export function useWordBank() {
 
   const importWords = useCallback(async (
     wordListText: string,
-    targetLanguage: string,
     onProgress: (progress: { current: number; total: number; word: string }) => void
   ): Promise<{ successful: number; failed: number, errors: string[] }> => {
       if (!activeDictionary) throw new Error("No active dictionary to import words into.");
 
+      const { sourceLanguage, targetLanguage } = activeDictionary;
       const wordsToImport = wordListText.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
       const uniqueWords = [...new Set(wordsToImport)];
       const wordsToAdd: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>[] = [];
@@ -158,14 +160,14 @@ export function useWordBank() {
           const word = uniqueWords[i];
           onProgress({ current: i + 1, total: uniqueWords.length, word });
           
-          if (activeDictionary.words.some(w => w.english.toLowerCase() === word)) {
+          if (activeDictionary.words.some(w => w.sourceWord.toLowerCase() === word)) {
               console.log(`Skipping duplicate: ${word}`);
               continue; // Skip words already in the dictionary
           }
 
           try {
-              const details = await fetchWordDetails(word, targetLanguage);
-              wordsToAdd.push({ english: word, ...details });
+              const details = await fetchWordDetails(word, sourceLanguage, targetLanguage);
+              wordsToAdd.push({ sourceWord: word, ...details });
               successful++;
           } catch (error: any) {
               console.error(`Failed to import "${word}":`, error);
@@ -178,7 +180,7 @@ export function useWordBank() {
         updateActiveDictionaryWords(prevWords => {
           const newWords: Word[] = wordsToAdd.map(details => ({
             ...details,
-            id: `${new Date().toISOString()}-${details.english}`,
+            id: `${new Date().toISOString()}-${details.sourceWord}`,
             masteryLevel: 0,
             lastReviewed: null,
           }));

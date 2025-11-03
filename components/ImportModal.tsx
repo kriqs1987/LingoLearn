@@ -3,13 +3,12 @@ import React, { useState, useCallback } from 'react';
 interface ImportModalProps {
     dictionaryName: string;
     onClose: () => void;
-    onImport: (wordList: string, targetLanguage: string, onProgress: (progress: { current: number; total: number; word: string }) => void) => Promise<{ successful: number; failed: number, errors: string[] }>;
-    targetLanguage: string;
+    onImport: (wordList: string, onProgress: (progress: { current: number; total: number; word: string }) => void) => Promise<{ successful: number; failed: number, errors: string[] }>;
 }
 
 type ImportStatus = 'idle' | 'in_progress' | 'complete';
 
-const ImportModal: React.FC<ImportModalProps> = ({ dictionaryName, onClose, onImport, targetLanguage }) => {
+const ImportModal: React.FC<ImportModalProps> = ({ dictionaryName, onClose, onImport }) => {
     const [wordList, setWordList] = useState('');
     const [status, setStatus] = useState<ImportStatus>('idle');
     const [progress, setProgress] = useState<{ current: number; total: number; word: string } | null>(null);
@@ -21,13 +20,13 @@ const ImportModal: React.FC<ImportModalProps> = ({ dictionaryName, onClose, onIm
         setProgress(null);
         setResults(null);
         
-        const importResults = await onImport(wordList, targetLanguage, (p) => {
+        const importResults = await onImport(wordList, (p) => {
             setProgress(p);
         });
 
         setResults(importResults);
         setStatus('complete');
-    }, [wordList, onImport, targetLanguage]);
+    }, [wordList, onImport]);
 
     const renderContent = () => {
         switch (status) {

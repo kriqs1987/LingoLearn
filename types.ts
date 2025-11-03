@@ -1,7 +1,7 @@
 export interface Word {
   id: string;
-  english: string;
-  translation: string;
+  sourceWord: string;
+  translatedWord: string;
   definition: string;
   exampleSentence: string;
   masteryLevel: number; // 0-5
@@ -11,6 +11,8 @@ export interface Word {
 export interface Dictionary {
   id: string;
   name: string;
+  sourceLanguage: string;
+  targetLanguage: string;
   words: Word[];
 }
 
