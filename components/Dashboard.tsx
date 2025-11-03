@@ -61,12 +61,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             )}
         </div>
       
-      {activeDictionary && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold ml-1">Recently Added Words</h2>
-          <WordList words={words.slice(0, 5)} />
-        </div>
-      )}
+
     </div>
   );
 };
