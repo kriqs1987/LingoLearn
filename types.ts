@@ -1,4 +1,3 @@
-
 export interface Word {
   id: string;
   sourceWord: string;
@@ -28,10 +27,4 @@ export interface QuizQuestion {
   word: Word;
   options: string[]; // array of translations
   correctAnswer: string;
-}
-
-// Fix: Add User interface for authentication context. This resolves missing type errors.
-export interface User {
-  username: string;
-  isAdmin: boolean;
 }

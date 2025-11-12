@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AppView } from '../types';
 import { BrainCircuitIcon, FolderIcon, CogIcon } from './Icons';
@@ -52,8 +51,6 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, onNavigate }) => {
         >
           <FolderIcon className="w-6 h-6" />
         </NavButton>
-        {/* Fix: Remove settings view button as API key is now handled by environment variables. */}
-        {/*
         <NavButton
             label="Settings"
             view={AppView.SETTINGS}
@@ -62,7 +59,6 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, onNavigate }) => {
          >
             <CogIcon className="w-6 h-6" />
          </NavButton>
-        */}
       </div>
     </nav>
   );

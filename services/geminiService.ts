@@ -1,12 +1,16 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
+import { LOCAL_STORAGE_API_KEY } from '../constants';
 
 /**
- * Fetches word details directly from the Gemini API.
+ * Fetches word details directly from the Gemini API using a key from localStorage.
  */
 export async function fetchWordDetails(sourceWord: string, sourceLanguage: string, targetLanguage: string): Promise<{ translatedWord: string; definition: string; exampleSentence: string; }> {
-  // Fix: Use process.env.API_KEY as per Gemini API guidelines.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+  if (!apiKey) {
+    throw new Error("Gemini API key not found. Please set it in the Settings tab.");
+  }
+  
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     const response = await ai.models.generateContent({
@@ -40,7 +44,6 @@ export async function fetchWordDetails(sourceWord: string, sourceLanguage: strin
     return details;
   } catch (error) {
     console.error("Error fetching word details from Gemini API:", error);
-    // Fix: Re-throw a user-friendly error without mentioning API keys, as they are no longer user-configurable.
-    throw new Error("Could not fetch details for the word. The AI service may be unavailable or the word is invalid.");
+    throw new Error("Could not fetch details for the word. The AI service may be unavailable, the word is invalid, or your API key is incorrect.");
   }
 }

@@ -195,6 +195,12 @@ export function useWordBank() {
 
       return { successful, failed, errors };
   }, [activeDictionary, dictionaries, persistData]);
+  
+  const deleteAllData = useCallback(() => {
+    persistData([]);
+    setActiveDictionaryId(null);
+    localStorage.removeItem('lingoLearn_lastActiveDict');
+  }, [persistData]);
 
   const words = activeDictionary?.words || [];
   const totalMastery = words.reduce((sum, word) => sum + word.masteryLevel, 0);
@@ -206,6 +212,7 @@ export function useWordBank() {
     setActiveDictionary,
     createDictionary,
     deleteDictionary,
+    deleteAllData,
     words,
     addWord,
     updateWordMastery,

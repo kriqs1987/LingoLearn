@@ -17,6 +17,7 @@ interface ManageWordsViewProps {
   isLoading: boolean;
   error: string | null;
   onOpenImportModal: () => void;
+  onExportDictionary: () => void;
 }
 
 const ManageWordsView: React.FC<ManageWordsViewProps> = ({
@@ -31,6 +32,7 @@ const ManageWordsView: React.FC<ManageWordsViewProps> = ({
   isLoading,
   error,
   onOpenImportModal,
+  onExportDictionary,
 }) => {
   const [wordToEdit, setWordToEdit] = useState<Word | null>(null);
 
@@ -51,11 +53,12 @@ const ManageWordsView: React.FC<ManageWordsViewProps> = ({
     <div className="space-y-6">
       <DictionaryManager 
         dictionaries={dictionaries}
-        activeDictionaryId={activeDictionary?.id || null}
+        activeDictionary={activeDictionary}
         onCreateDictionary={createDictionary}
         onDeleteDictionary={deleteDictionary}
         onSelectDictionary={setActiveDictionary}
         onOpenImportModal={onOpenImportModal}
+        onExportDictionary={onExportDictionary}
       />
 
       {activeDictionary && (
