@@ -3,16 +3,6 @@ import { Word, Dictionary } from '../types';
 import { MAX_MASTERY_LEVEL, QUIZ_SESSION_LENGTH, LOCAL_STORAGE_DATA_KEY } from '../constants';
 import { fetchWordDetails } from '../services/geminiService';
 
-const loadDictionariesFromStorage = (): Dictionary[] => {
-    try {
-        const data = localStorage.getItem(LOCAL_STORAGE_DATA_KEY);
-        return data ? JSON.parse(data) : [];
-    } catch (error) {
-        console.error("Failed to load data from localStorage", error);
-        return [];
-    }
-};
-
 const saveDictionariesToStorage = (dictionaries: Dictionary[]) => {
     try {
         localStorage.setItem(LOCAL_STORAGE_DATA_KEY, JSON.stringify(dictionaries));
@@ -21,6 +11,35 @@ const saveDictionariesToStorage = (dictionaries: Dictionary[]) => {
     }
 };
 
+const loadDictionariesFromStorage = (): Dictionary[] => {
+    try {
+        const data = localStorage.getItem(LOCAL_STORAGE_DATA_KEY);
+        if (data) {
+            const parsedData = JSON.parse(data);
+            if (Array.isArray(parsedData)) {
+                // Perform a deeper validation to ensure each item is a valid dictionary object.
+                // This prevents crashes if the array contains non-objects or malformed objects.
+                const validDictionaries = parsedData.filter(item => 
+                    item && typeof item === 'object' && 
+                    'id' in item && 'name' in item && Array.isArray(item.words)
+                );
+                
+                // If the loaded data had invalid items, clean it up for the next session.
+                if (validDictionaries.length !== parsedData.length) {
+                   console.warn("Cleaned up corrupted data from localStorage.");
+                   saveDictionariesToStorage(validDictionaries);
+                }
+                return validDictionaries;
+            }
+        }
+        return []; // Return empty array if no data or data is not an array
+    } catch (error) {
+        console.error("Failed to load or parse data from localStorage", error);
+        // If data is corrupted, it's safer to start fresh.
+        localStorage.removeItem(LOCAL_STORAGE_DATA_KEY);
+        return [];
+    }
+};
 
 export function useWordBank() {
   const [dictionaries, setDictionaries] = useState<Dictionary[]>(loadDictionariesFromStorage());
