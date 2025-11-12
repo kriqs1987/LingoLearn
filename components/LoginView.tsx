@@ -50,7 +50,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onSwitchToRegister }) => {
                 </div>
             </div>
             <div>
-                {/* FIX: The 'name' attribute is not a valid prop for a label element. */}
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Password
                 </label>

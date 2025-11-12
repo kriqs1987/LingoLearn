@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { apiService } from '../services/apiService';
+import { LOCAL_STORAGE_DATA_KEY, LOCAL_STORAGE_USERS_KEY } from '../constants';
 
 interface UserStats {
     username: string;
@@ -8,34 +8,38 @@ interface UserStats {
     wordCount: number;
 }
 
-interface AdminViewProps {
-    token: string | null;
-}
-
-const AdminView: React.FC<AdminViewProps> = ({ token }) => {
+const AdminView: React.FC = () => {
     const [userStats, setUserStats] = useState<UserStats[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            if (!token) {
-                setError("Authentication token not found.");
-                setIsLoading(false);
-                return;
-            }
-            try {
-                const stats = await apiService.getAdminUserStats(token);
-                setUserStats(stats);
-            } catch (err: any) {
-                setError(err.message || "Failed to load user statistics.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        try {
+            const usersJSON = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
+            const dataJSON = localStorage.getItem(LOCAL_STORAGE_DATA_KEY);
 
-        fetchStats();
-    }, [token]);
+            const users = usersJSON ? JSON.parse(usersJSON) : [];
+            const data = dataJSON ? JSON.parse(dataJSON) : {};
+
+            const stats: UserStats[] = users.map((user: { username: string; isAdmin: boolean }) => {
+                const userData = data[user.username] || { dictionaries: [] };
+                const dictionaryCount = userData.dictionaries.length;
+                const wordCount = userData.dictionaries.reduce((sum: number, dict: { words: any[] }) => sum + dict.words.length, 0);
+
+                return {
+                    username: user.username,
+                    isAdmin: user.isAdmin,
+                    dictionaryCount,
+                    wordCount,
+                };
+            });
+            setUserStats(stats);
+        } catch (err: any) {
+            setError("Failed to load user statistics from local storage.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
     return (
         <div className="space-y-6">

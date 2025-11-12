@@ -1,3 +1,4 @@
+
 export interface Word {
   id: string;
   sourceWord: string;
@@ -20,7 +21,7 @@ export enum AppView {
   DASHBOARD = 'DASHBOARD',
   QUIZ = 'QUIZ',
   MANAGE_WORDS = 'MANAGE_WORDS',
-  ADMIN = 'ADMIN',
+  SETTINGS = 'SETTINGS',
 }
 
 export interface QuizQuestion {
@@ -29,6 +30,7 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
+// Fix: Add User interface for authentication context. This resolves missing type errors.
 export interface User {
   username: string;
   isAdmin: boolean;
