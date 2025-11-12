@@ -36,6 +36,8 @@ const App: React.FC = () => {
     deleteWord,
     updateWord,
     importWords,
+    importFromCSV,
+    importExamples,
   } = useWordBank();
   
   useEffect(() => {
@@ -225,6 +227,8 @@ const App: React.FC = () => {
             dictionaryName={activeDictionary.name}
             onClose={() => setImportModalOpen(false)}
             onImport={importWords}
+            onImportCSV={importFromCSV}
+            onImportExamples={importExamples}
         />
       )}
     </div>
