@@ -123,7 +123,7 @@ const App: React.FC = () => {
         return;
     }
 
-    const headers = ["sourceWord", "translatedWord", "definition", "exampleSentence", "masteryLevel"];
+    const headers = ["sourceWord", "translatedWord", "definition", "exampleSentence", "masteryLevel", "lastReviewed"];
     const csvContent = [
         headers.join(','),
         ...activeDictionary.words.map(word =>
@@ -132,7 +132,8 @@ const App: React.FC = () => {
                 `"${word.translatedWord.replace(/"/g, '""')}"`,
                 `"${word.definition.replace(/"/g, '""')}"`,
                 `"${word.exampleSentence.replace(/"/g, '""')}"`,
-                word.masteryLevel
+                word.masteryLevel,
+                `"${word.lastReviewed || ''}"`
             ].join(',')
         )
     ].join('\n');
