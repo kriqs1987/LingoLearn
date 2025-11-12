@@ -1,10 +1,11 @@
 import React from 'react';
 import { AppView } from '../types';
-import { BrainCircuitIcon, FolderIcon } from './Icons';
+import { BrainCircuitIcon, FolderIcon, UsersIcon } from './Icons';
 
 interface NavBarProps {
   currentView: AppView;
   onNavigate: (view: AppView) => void;
+  isAdmin: boolean;
 }
 
 const NavButton: React.FC<{
@@ -31,7 +32,7 @@ const NavButton: React.FC<{
 };
 
 
-const NavBar: React.FC<NavBarProps> = ({ currentView, onNavigate }) => {
+const NavBar: React.FC<NavBarProps> = ({ currentView, onNavigate, isAdmin }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-t-lg z-10">
       <div className="container mx-auto px-4 h-16 flex justify-around items-center">
@@ -51,6 +52,16 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, onNavigate }) => {
         >
           <FolderIcon className="w-6 h-6" />
         </NavButton>
+        {isAdmin && (
+             <NavButton
+                label="Admin"
+                view={AppView.ADMIN}
+                currentView={currentView}
+                onNavigate={onNavigate}
+             >
+                <UsersIcon className="w-6 h-6" />
+             </NavButton>
+        )}
       </div>
     </nav>
   );

@@ -1,134 +1,156 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Word, Dictionary } from '../types';
-import { LOCAL_STORAGE_KEY, MAX_MASTERY_LEVEL, QUIZ_SESSION_LENGTH } from '../constants';
+import { Word, Dictionary, User } from '../types';
+import { MAX_MASTERY_LEVEL, QUIZ_SESSION_LENGTH } from '../constants';
 import { fetchWordDetails } from '../services/geminiService';
+import { apiService } from '../services/apiService';
 
-interface LingoLearnData {
-    dictionaries: Dictionary[];
-    activeDictionaryId: string | null;
-}
+export function useWordBank(user: User | null, token: string | null) {
+  const [dictionaries, setDictionaries] = useState<Dictionary[]>([]);
+  const [activeDictionaryId, setActiveDictionaryId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const getInitialData = (): LingoLearnData => {
-    try {
-        const item = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (item) {
-            const data = JSON.parse(item);
-            // Basic validation
-            if (Array.isArray(data.dictionaries)) {
-                return data;
-            }
-        }
-    } catch (error) {
-        console.error("Error reading from localStorage", error);
-    }
-    // Return default structure if no valid data found
-    return { dictionaries: [], activeDictionaryId: null };
-};
-
-
-export function useWordBank() {
-  const [data, setData] = useState<LingoLearnData>(getInitialData);
-
+  // Fetch all user data when user logs in
   useEffect(() => {
-    try {
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-    } catch (error) {
-        console.error("Error writing to localStorage", error);
-    }
-  }, [data]);
-
-  const activeDictionary = useMemo(() => {
-    return data.dictionaries.find(d => d.id === data.activeDictionaryId) || null;
-  }, [data.dictionaries, data.activeDictionaryId]);
-
-  const createDictionary = useCallback((name: string, sourceLanguage: string, targetLanguage: string) => {
-    const newDictionary: Dictionary = {
-        id: new Date().toISOString(),
-        name,
-        sourceLanguage,
-        targetLanguage,
-        words: [],
+    const loadInitialData = async () => {
+      if (user && token) {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const userDictionaries = await apiService.getDictionaries(token);
+          setDictionaries(userDictionaries);
+          if (userDictionaries.length > 0) {
+            // Try to load last active dictionary from local storage for better UX
+            const lastActiveId = localStorage.getItem(`lingoLearn_lastActiveDict_${user.username}`);
+            if (lastActiveId && userDictionaries.some(d => d.id === lastActiveId)) {
+               setActiveDictionaryId(lastActiveId);
+            } else {
+               setActiveDictionaryId(userDictionaries[0].id);
+            }
+          } else {
+            setActiveDictionaryId(null);
+          }
+        } catch (err: any) {
+          setError(err.message || 'Failed to load your dictionaries.');
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Clear data on logout
+        setDictionaries([]);
+        setActiveDictionaryId(null);
+      }
     };
-    setData(prevData => {
-        const newData = {
-            ...prevData,
-            dictionaries: [...prevData.dictionaries, newDictionary],
-        };
-        // If it's the first dictionary, make it active
-        if (prevData.dictionaries.length === 0) {
-            newData.activeDictionaryId = newDictionary.id;
-        }
-        return newData;
-    });
-  }, []);
-
-  const deleteDictionary = useCallback((dictionaryId: string) => {
-    setData(prevData => {
-        const newDictionaries = prevData.dictionaries.filter(d => d.id !== dictionaryId);
-        let newActiveId = prevData.activeDictionaryId;
-        // If the deleted dictionary was active, select the first one or null
-        if (newActiveId === dictionaryId) {
-            newActiveId = newDictionaries.length > 0 ? newDictionaries[0].id : null;
-        }
-        return { dictionaries: newDictionaries, activeDictionaryId: newActiveId };
-    });
-  }, []);
+    loadInitialData();
+  }, [user, token]);
+  
+  const activeDictionary = useMemo(() => {
+    return dictionaries.find(d => d.id === activeDictionaryId) || null;
+  }, [dictionaries, activeDictionaryId]);
   
   const setActiveDictionary = useCallback((dictionaryId: string | null) => {
-    setData(prevData => ({ ...prevData, activeDictionaryId: dictionaryId }));
-  }, []);
+    setActiveDictionaryId(dictionaryId);
+     if (user && dictionaryId) {
+        localStorage.setItem(`lingoLearn_lastActiveDict_${user.username}`, dictionaryId);
+     }
+  }, [user]);
 
-  const updateActiveDictionaryWords = (updateFn: (words: Word[]) => Word[]) => {
-    if (!data.activeDictionaryId) return;
-    setData(prevData => ({
-        ...prevData,
-        dictionaries: prevData.dictionaries.map(d => 
-            d.id === data.activeDictionaryId ? { ...d, words: updateFn(d.words) } : d
-        )
-    }));
-  };
-
-  const addWord = useCallback((wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
-    if (!activeDictionary) return;
-    const alreadyExists = activeDictionary.words.some(w => w.sourceWord.toLowerCase() === wordDetails.sourceWord.toLowerCase());
-    if (alreadyExists) {
-      throw new Error(`The word "${wordDetails.sourceWord}" is already in this dictionary.`);
-    }
-    
-    const newWord: Word = {
-      ...wordDetails,
-      id: `${new Date().toISOString()}-${wordDetails.sourceWord}`,
-      masteryLevel: 0,
-      lastReviewed: null,
-    };
-    updateActiveDictionaryWords(prevWords => [newWord, ...prevWords]);
-  }, [activeDictionary]);
-
-  const updateWordMastery = useCallback((wordId: string, isCorrect: boolean) => {
-    updateActiveDictionaryWords(prevWords =>
-      prevWords.map(word => {
-        if (word.id === wordId) {
-          const newMasteryLevel = isCorrect
-            ? Math.min(MAX_MASTERY_LEVEL, word.masteryLevel + 1)
-            : Math.max(0, word.masteryLevel - 1);
-          return { ...word, masteryLevel: newMasteryLevel, lastReviewed: new Date().toISOString() };
+  const createDictionary = useCallback(async (name: string, sourceLanguage: string, targetLanguage: string) => {
+    if (!token) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+        const newDictionary = await apiService.createDictionary(token, { name, sourceLanguage, targetLanguage });
+        setDictionaries(prev => [...prev, newDictionary]);
+        // If it's the first dictionary, make it active
+        if (dictionaries.length === 0) {
+            setActiveDictionary(newDictionary.id);
         }
-        return word;
-      })
-    );
-  }, []);
+    } catch(err: any) {
+        setError(err.message || 'Failed to create dictionary.');
+    } finally {
+        setIsLoading(false);
+    }
+  }, [token, dictionaries.length]);
+  
+  const deleteDictionary = useCallback(async (dictionaryId: string) => {
+    if (!token) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+        await apiService.deleteDictionary(token, dictionaryId);
+        setDictionaries(prev => {
+            const newDictionaries = prev.filter(d => d.id !== dictionaryId);
+            if (activeDictionaryId === dictionaryId) {
+                const newActiveId = newDictionaries.length > 0 ? newDictionaries[0].id : null;
+                setActiveDictionary(newActiveId);
+            }
+            return newDictionaries;
+        });
+    } catch(err: any) {
+        setError(err.message || 'Failed to delete dictionary.');
+    } finally {
+        setIsLoading(false);
+    }
+  }, [token, activeDictionaryId]);
+  
+  const addWord = useCallback(async (wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
+    if (!token || !activeDictionaryId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+        const newWord = await apiService.addWord(token, activeDictionaryId, wordDetails);
+        setDictionaries(prev => prev.map(d => 
+            d.id === activeDictionaryId ? { ...d, words: [newWord, ...d.words] } : d
+        ));
+    } catch (err: any) {
+        setError(err.message);
+        throw err; // Re-throw to be caught by the calling component
+    } finally {
+        setIsLoading(false);
+    }
+  }, [token, activeDictionaryId]);
 
-  const deleteWord = useCallback((wordId: string) => {
-    updateActiveDictionaryWords(prevWords => prevWords.filter(word => word.id !== wordId));
-  }, []);
+  const updateWordMastery = useCallback(async (wordId: string, isCorrect: boolean) => {
+    if (!token || !activeDictionaryId) return;
+    try {
+        const updatedWord = await apiService.updateWordMastery(token, wordId, isCorrect);
+        setDictionaries(prev => prev.map(d => 
+            d.id === activeDictionaryId 
+            ? { ...d, words: d.words.map(w => w.id === wordId ? updatedWord : w) } 
+            : d
+        ));
+    } catch (err: any) {
+        console.error("Failed to update mastery:", err.message);
+        // This is a background update, so we don't set a global error
+    }
+  }, [token, activeDictionaryId]);
 
-  const updateWord = useCallback((wordId: string, updatedDetails: { translatedWord: string; exampleSentence: string; }) => {
-    updateActiveDictionaryWords(prevWords =>
-      prevWords.map(word => 
-        word.id === wordId ? { ...word, ...updatedDetails } : word
-      )
-    );
-  }, []);
+  const deleteWord = useCallback(async (wordId: string) => {
+    if (!token || !activeDictionaryId) return;
+    try {
+        await apiService.deleteWord(token, wordId);
+        setDictionaries(prev => prev.map(d =>
+            d.id === activeDictionaryId ? { ...d, words: d.words.filter(w => w.id !== wordId) } : d
+        ));
+    } catch(err: any) {
+        setError(err.message || 'Failed to delete word.');
+    }
+  }, [token, activeDictionaryId]);
+
+  const updateWord = useCallback(async (wordId: string, updatedDetails: { translatedWord: string; exampleSentence: string; }) => {
+    if (!token || !activeDictionaryId) return;
+    try {
+        const updatedWord = await apiService.updateWord(token, wordId, updatedDetails);
+         setDictionaries(prev => prev.map(d => 
+            d.id === activeDictionaryId 
+            ? { ...d, words: d.words.map(w => w.id === wordId ? updatedWord : w) } 
+            : d
+        ));
+    } catch(err: any) {
+        setError(err.message || 'Failed to update word.');
+    }
+  }, [token, activeDictionaryId]);
   
   const getWordsForQuiz = useCallback(() => {
     if (!activeDictionary) return [];
@@ -145,16 +167,16 @@ export function useWordBank() {
     wordListText: string,
     onProgress: (progress: { current: number; total: number; word: string }) => void
   ): Promise<{ successful: number; failed: number, errors: string[] }> => {
-      if (!activeDictionary) throw new Error("No active dictionary to import words into.");
+      if (!activeDictionary || !token) throw new Error("No active dictionary or auth token.");
 
       const { sourceLanguage, targetLanguage } = activeDictionary;
       const wordsToImport = wordListText.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
       const uniqueWords = [...new Set(wordsToImport)];
-      const wordsToAdd: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>[] = [];
       
       let successful = 0;
       let failed = 0;
       const errors: string[] = [];
+      const addedWords: Word[] = [];
 
       for (let i = 0; i < uniqueWords.length; i++) {
           const word = uniqueWords[i];
@@ -162,47 +184,39 @@ export function useWordBank() {
           
           if (activeDictionary.words.some(w => w.sourceWord.toLowerCase() === word)) {
               console.log(`Skipping duplicate: ${word}`);
-              continue; // Skip words already in the dictionary
+              continue;
           }
 
           try {
               const details = await fetchWordDetails(word, sourceLanguage, targetLanguage);
-              wordsToAdd.push({ sourceWord: word, ...details });
+              const newWord = await apiService.addWord(token, activeDictionary.id, { sourceWord: word, ...details });
+              addedWords.push(newWord);
               successful++;
           } catch (error: any) {
-              console.error(`Failed to import "${word}":`, error);
               failed++;
               errors.push(`"${word}": ${error.message || 'Unknown error'}`);
           }
       }
 
-      if (wordsToAdd.length > 0) {
-        updateActiveDictionaryWords(prevWords => {
-          const newWords: Word[] = wordsToAdd.map(details => ({
-            ...details,
-            id: `${new Date().toISOString()}-${details.sourceWord}`,
-            masteryLevel: 0,
-            lastReviewed: null,
-          }));
-          return [...newWords, ...prevWords];
-        });
+      if (addedWords.length > 0) {
+        setDictionaries(prev => prev.map(d =>
+            d.id === activeDictionary.id ? { ...d, words: [...addedWords, ...d.words] } : d
+        ));
       }
       
       return { successful, failed, errors };
-
-  }, [activeDictionary]);
-
+  }, [activeDictionary, token]);
 
   const words = activeDictionary?.words || [];
   const totalMastery = words.reduce((sum, word) => sum + word.masteryLevel, 0);
   const maxPossibleMastery = words.length * MAX_MASTERY_LEVEL;
 
   return { 
-    dictionaries: data.dictionaries,
+    dictionaries,
     activeDictionary,
+    setActiveDictionary,
     createDictionary,
     deleteDictionary,
-    setActiveDictionary,
     words,
     addWord,
     updateWordMastery,
@@ -211,6 +225,8 @@ export function useWordBank() {
     maxPossibleMastery,
     deleteWord,
     updateWord,
-    importWords
+    importWords,
+    isLoading,
+    error
   };
 }

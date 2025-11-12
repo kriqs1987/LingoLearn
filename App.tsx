@@ -1,29 +1,36 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import QuizView from './components/QuizView';
 import ManageWordsView from './components/ManageWordsView';
 import NavBar from './components/NavBar';
 import ImportModal from './components/ImportModal';
-import { AppView, QuizQuestion, Dictionary } from './types';
+import { AppView, QuizQuestion } from './types';
 import { fetchWordDetails } from './services/geminiService';
 import { useWordBank } from './hooks/useWordBank';
-import { SUPPORTED_LANGUAGES } from './constants';
+import { AuthContext } from './contexts/AuthContext';
+import LoginView from './components/LoginView';
+import RegisterView from './components/RegisterView';
+import AdminView from './components/AdminView';
+
 
 const App: React.FC = () => {
+  const { user, token, logout } = useContext(AuthContext);
+  const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
+  
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isAddingWord, setIsAddingWord] = useState(false);
+  const [addWordError, setAddWordError] = useState<string | null>(null);
   const [lastQuizResult, setLastQuizResult] = useState<{correct: number, total: number} | null>(null);
   const [isImportModalOpen, setImportModalOpen] = useState(false);
 
   const {
     dictionaries,
     activeDictionary,
+    setActiveDictionary,
     createDictionary,
     deleteDictionary,
-    setActiveDictionary,
     words,
     addWord,
     updateWordMastery,
@@ -33,26 +40,28 @@ const App: React.FC = () => {
     deleteWord,
     updateWord,
     importWords,
-  } = useWordBank();
+    isLoading: isWordBankLoading,
+    error: wordBankError,
+  } = useWordBank(user, token);
 
   const handleAddNewWord = useCallback(async (word: string) => {
     if (!activeDictionary) {
-        setError("Please select a dictionary first.");
+        setAddWordError("Please select a dictionary first.");
         return;
     }
-    setIsLoading(true);
-    setError(null);
+    setIsAddingWord(true);
+    setAddWordError(null);
     try {
       const { sourceLanguage, targetLanguage } = activeDictionary;
       const details = await fetchWordDetails(word, sourceLanguage, targetLanguage);
-      addWord({
+      await addWord({
         sourceWord: word,
         ...details
       });
     } catch (e: any) {
-      setError(e.message || "An unknown error occurred.");
+      setAddWordError(e.message || "An unknown error occurred.");
     } finally {
-      setIsLoading(false);
+      setIsAddingWord(false);
     }
   }, [addWord, activeDictionary]);
 
@@ -89,12 +98,36 @@ const App: React.FC = () => {
   }, []);
 
   const handleNavigate = (view: AppView) => {
-    setError(null);
+    setAddWordError(null);
     setLastQuizResult(null);
     setCurrentView(view);
   }
+
+  if (!user) {
+    if (authScreen === 'login') {
+      return <LoginView onSwitchToRegister={() => setAuthScreen('register')} />;
+    }
+    return <RegisterView onSwitchToLogin={() => setAuthScreen('login')} />;
+  }
   
   const renderContent = () => {
+    if (isWordBankLoading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-sky-500"></div>
+            </div>
+        );
+    }
+
+    if (wordBankError) {
+        return (
+             <div className="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4 rounded-lg mb-6" role="alert">
+                <p className="font-bold">Error</p>
+                <p>{wordBankError}</p>
+            </div>
+        )
+    }
+
     switch(currentView) {
       case AppView.DASHBOARD:
         return (
@@ -117,8 +150,8 @@ const App: React.FC = () => {
             onAddWord={handleAddNewWord}
             onDeleteWord={deleteWord}
             onUpdateWord={updateWord}
-            isLoading={isLoading}
-            error={error}
+            isLoading={isAddingWord}
+            error={addWordError}
             onOpenImportModal={() => setImportModalOpen(true)}
           />
         );
@@ -130,6 +163,8 @@ const App: React.FC = () => {
             onAnswer={updateWordMastery}
           />
         );
+      case AppView.ADMIN:
+        return user.isAdmin ? <AdminView token={token} /> : <p>Access Denied</p>;
       default:
         return null;
     }
@@ -137,7 +172,7 @@ const App: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
-      <Header />
+      <Header user={user} onLogout={logout} />
       <main className="container mx-auto p-4 md:p-6 pb-20">
         {lastQuizResult && currentView === AppView.DASHBOARD && (
           <div className="bg-sky-100 dark:bg-sky-900 border-l-4 border-sky-500 text-sky-700 dark:text-sky-200 p-4 rounded-lg mb-6" role="alert">
@@ -148,7 +183,7 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
       {currentView !== AppView.QUIZ && (
-         <NavBar currentView={currentView} onNavigate={handleNavigate} />
+         <NavBar currentView={currentView} onNavigate={handleNavigate} isAdmin={user.isAdmin} />
       )}
       {isImportModalOpen && activeDictionary && (
         <ImportModal

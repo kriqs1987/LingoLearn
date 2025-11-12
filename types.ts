@@ -20,6 +20,7 @@ export enum AppView {
   DASHBOARD = 'DASHBOARD',
   QUIZ = 'QUIZ',
   MANAGE_WORDS = 'MANAGE_WORDS',
+  ADMIN = 'ADMIN',
 }
 
 export interface QuizQuestion {
@@ -28,7 +29,7 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
-// FIX: Add User interface to resolve import error in contexts/AuthContext.tsx.
 export interface User {
   username: string;
+  isAdmin: boolean;
 }
