@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface ProgressBarProps {
@@ -13,7 +12,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ current, max }) => {
     <div>
       <div className="flex justify-between mb-1">
         <span className="text-base font-medium text-sky-700 dark:text-white">Overall Mastery</span>
-        <span className="text-sm font-medium text-sky-700 dark:text-white">{Math.round(percentage)}%</span>
+        <span className="text-sm font-medium text-sky-700 dark:text-white">{current} / {max}</span>
       </div>
       <div className="w-full bg-slate-200 rounded-full h-4 dark:bg-slate-700">
         <div 
