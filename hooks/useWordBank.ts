@@ -117,6 +117,13 @@ export function useWordBank() {
     persistData(newDictionaries);
   }, [dictionaries, activeDictionaryId, persistData, setActiveDictionary]);
 
+  const renameDictionary = useCallback(async (dictionaryId: string, newName: string) => {
+    const newDictionaries = dictionaries.map(d =>
+        d.id === dictionaryId ? { ...d, name: newName } : d
+    );
+    persistData(newDictionaries);
+  }, [dictionaries, persistData]);
+
   const addWord = useCallback(async (wordDetails: Omit<Word, 'id' | 'masteryLevel' | 'lastReviewed'>) => {
     if (!activeDictionaryId) return;
     const newWord: Word = {
@@ -396,6 +403,7 @@ export function useWordBank() {
     setActiveDictionary,
     createDictionary,
     deleteDictionary,
+    renameDictionary,
     deleteAllData,
     words,
     addWord,

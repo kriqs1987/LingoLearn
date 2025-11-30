@@ -10,6 +10,7 @@ interface ManageWordsViewProps {
   activeDictionary: Dictionary | null;
   createDictionary: (name: string, sourceLanguage: string, targetLanguage: string) => void;
   deleteDictionary: (id: string) => void;
+  renameDictionary: (id: string, name: string) => void;
   setActiveDictionary: (id: string | null) => void;
   onAddWord: (word: string) => Promise<void>;
   onDeleteWord: (wordId: string) => void;
@@ -25,6 +26,7 @@ const ManageWordsView: React.FC<ManageWordsViewProps> = ({
   activeDictionary,
   createDictionary,
   deleteDictionary,
+  renameDictionary,
   setActiveDictionary,
   onAddWord,
   onDeleteWord,
@@ -56,6 +58,7 @@ const ManageWordsView: React.FC<ManageWordsViewProps> = ({
         activeDictionary={activeDictionary}
         onCreateDictionary={createDictionary}
         onDeleteDictionary={deleteDictionary}
+        onRenameDictionary={renameDictionary}
         onSelectDictionary={setActiveDictionary}
         onOpenImportModal={onOpenImportModal}
         onExportDictionary={onExportDictionary}

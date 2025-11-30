@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Dictionary } from '../types';
-import { PlusIcon, ArrowUpTrayIcon, TrashIcon, ArrowDownTrayIcon } from './Icons';
+import { PlusIcon, ArrowUpTrayIcon, TrashIcon, ArrowDownTrayIcon, PencilIcon } from './Icons';
 import { SUPPORTED_LANGUAGES } from '../constants';
 
 interface DictionaryManagerProps {
@@ -8,6 +8,7 @@ interface DictionaryManagerProps {
     activeDictionary: Dictionary | null;
     onCreateDictionary: (name: string, sourceLanguage: string, targetLanguage: string) => void;
     onDeleteDictionary: (id: string) => void;
+    onRenameDictionary: (id: string, name: string) => void;
     onSelectDictionary: (id: string | null) => void;
     onOpenImportModal: () => void;
     onExportDictionary: () => void;
@@ -18,6 +19,7 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
     activeDictionary,
     onCreateDictionary,
     onDeleteDictionary,
+    onRenameDictionary,
     onSelectDictionary,
     onOpenImportModal,
     onExportDictionary,
@@ -25,6 +27,8 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
     const [newDictionaryName, setNewDictionaryName] = useState('');
     const [sourceLanguage, setSourceLanguage] = useState(SUPPORTED_LANGUAGES[0]);
     const [targetLanguage, setTargetLanguage] = useState(SUPPORTED_LANGUAGES[1]);
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [renameName, setRenameName] = useState('');
     
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,6 +39,29 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
             }
             onCreateDictionary(newDictionaryName.trim(), sourceLanguage, targetLanguage);
             setNewDictionaryName('');
+        }
+    };
+
+    const handleStartRename = () => {
+        if (activeDictionary) {
+            setRenameName(activeDictionary.name);
+            setIsRenaming(true);
+        }
+    };
+
+    const handleRenameSubmit = () => {
+        if (activeDictionary && renameName.trim()) {
+            onRenameDictionary(activeDictionary.id, renameName.trim());
+            setIsRenaming(false);
+        }
+    };
+
+    const handleDelete = () => {
+        if (activeDictionary) {
+             const message = `Are you sure you want to delete the dictionary "${activeDictionary.name}"?\nThis will permanently delete all ${activeDictionary.words.length} words in it.`;
+             if (window.confirm(message)) {
+                 onDeleteDictionary(activeDictionary.id);
+             }
         }
     };
     
@@ -121,11 +148,15 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
                             ))}
                         </select>
                         <button
-                            onClick={() => {
-                                if (activeDictionary && window.confirm('Are you sure you want to delete this dictionary and all its words?')) {
-                                    onDeleteDictionary(activeDictionary.id);
-                                }
-                            }}
+                             onClick={handleStartRename}
+                             disabled={!activeDictionary}
+                             className="p-2 text-slate-500 hover:text-sky-500 bg-slate-200 dark:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:hover:text-slate-500"
+                             aria-label="Rename selected dictionary"
+                        >
+                            <PencilIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={handleDelete}
                             disabled={!activeDictionary}
                             className="p-2 text-slate-500 hover:text-red-500 bg-slate-200 dark:bg-slate-700 rounded-md transition-colors disabled:opacity-50 disabled:hover:text-slate-500"
                             aria-label="Delete selected dictionary"
@@ -134,6 +165,41 @@ const DictionaryManager: React.FC<DictionaryManagerProps> = ({
                         </button>
                     </div>
                  </div>
+            )}
+            
+            {isRenaming && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={() => setIsRenaming(false)}>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Rename Dictionary</h3>
+                        <input
+                            type="text"
+                            value={renameName}
+                            onChange={(e) => setRenameName(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-4 py-2 mb-4 focus:ring-2 focus:ring-sky-500 focus:outline-none dark:text-white"
+                            autoFocus
+                            placeholder="Enter new name"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameSubmit();
+                                if (e.key === 'Escape') setIsRenaming(false);
+                            }}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setIsRenaming(false)}
+                                className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleRenameSubmit}
+                                disabled={!renameName.trim()}
+                                className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 transition"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

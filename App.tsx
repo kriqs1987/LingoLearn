@@ -26,6 +26,7 @@ const App: React.FC = () => {
     setActiveDictionary,
     createDictionary,
     deleteDictionary,
+    renameDictionary,
     deleteAllData,
     words,
     addWord,
@@ -176,6 +177,7 @@ const App: React.FC = () => {
             activeDictionary={activeDictionary}
             createDictionary={createDictionary}
             deleteDictionary={deleteDictionary}
+            renameDictionary={renameDictionary}
             setActiveDictionary={setActiveDictionary}
             onAddWord={handleAddNewWord}
             onDeleteWord={deleteWord}
