@@ -5,11 +5,16 @@ import QuizView from './components/QuizView';
 import ManageWordsView from './components/ManageWordsView';
 import NavBar from './components/NavBar';
 import ImportModal from './components/ImportModal';
-import { AppView, QuizQuestion, Word } from './types';
+import { AppView, QuizQuestion, Word, QuizMode } from './types';
 import { fetchWordDetails } from './services/geminiService';
 import { useWordBank } from './hooks/useWordBank';
 import SettingsView from './components/SettingsView';
 import { LOCAL_STORAGE_API_KEY } from './constants';
+
+// Helper function defined outside component to avoid recreation and TSX generic parsing issues
+function shuffleArray<T>(array: T[]): T[] {
+  return [...array].sort(() => Math.random() - 0.5);
+}
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
@@ -88,25 +93,62 @@ const App: React.FC = () => {
     }
   }, [addWord, activeDictionary]);
 
-  const shuffleArray = <T,>(array: T[]): T[] => {
-    return array.sort(() => Math.random() - 0.5);
-  };
-  
   const handleStartQuiz = useCallback(() => {
     const quizWords = getWordsForQuiz();
     if (quizWords.length > 0) {
-      const questions = quizWords.map(wordToQuiz => {
-        const distractors = words
-          .filter(w => w.id !== wordToQuiz.id)
-          .map(w => w.translatedWord);
-        
-        const shuffledDistractors = shuffleArray(distractors).slice(0, 3);
-        const options = shuffleArray([wordToQuiz.translatedWord, ...shuffledDistractors]);
+      const questions: QuizQuestion[] = quizWords.map(wordToQuiz => {
+        // Randomly select a quiz mode
+        // 40% Chance: Select Translation (Source -> Target)
+        // 30% Chance: Select Source (Target -> Source)
+        // 30% Chance: Type Source (Target -> Source Typing)
+        const rand = Math.random();
+        let mode: QuizMode;
+        if (rand < 0.4) {
+          mode = QuizMode.SELECT_TRANSLATION;
+        } else if (rand < 0.7) {
+          mode = QuizMode.SELECT_SOURCE;
+        } else {
+          mode = QuizMode.TYPE_SOURCE;
+        }
+
+        let questionText = '';
+        let options: string[] | undefined;
+        let correctAnswer = '';
+
+        if (mode === QuizMode.SELECT_TRANSLATION) {
+             questionText = wordToQuiz.sourceWord;
+             correctAnswer = wordToQuiz.translatedWord;
+             
+             const distractors = words
+                .filter(w => w.id !== wordToQuiz.id)
+                .map(w => w.translatedWord);
+             const uniqueDistractors = Array.from(new Set(distractors));
+             const shuffledDistractors = shuffleArray(uniqueDistractors).slice(0, 3);
+             options = shuffleArray([correctAnswer, ...shuffledDistractors]);
+
+        } else if (mode === QuizMode.SELECT_SOURCE) {
+             questionText = wordToQuiz.translatedWord;
+             correctAnswer = wordToQuiz.sourceWord;
+             
+             const distractors = words
+                .filter(w => w.id !== wordToQuiz.id)
+                .map(w => w.sourceWord);
+             const uniqueDistractors = Array.from(new Set(distractors));
+             const shuffledDistractors = shuffleArray(uniqueDistractors).slice(0, 3);
+             options = shuffleArray([correctAnswer, ...shuffledDistractors]);
+        } else {
+             // TYPE_SOURCE
+             questionText = wordToQuiz.translatedWord;
+             correctAnswer = wordToQuiz.sourceWord;
+             options = undefined;
+        }
         
         return {
           word: wordToQuiz,
+          mode,
+          questionText,
           options,
-          correctAnswer: wordToQuiz.translatedWord
+          correctAnswer
         };
       });
       setQuizQuestions(questions);

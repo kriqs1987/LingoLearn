@@ -23,8 +23,16 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
 }
 
+export enum QuizMode {
+  SELECT_TRANSLATION = 'SELECT_TRANSLATION', // Show source, choose translation
+  SELECT_SOURCE = 'SELECT_SOURCE',           // Show translation, choose source
+  TYPE_SOURCE = 'TYPE_SOURCE',               // Show translation, type source
+}
+
 export interface QuizQuestion {
   word: Word;
-  options: string[]; // array of translations
+  mode: QuizMode;
+  questionText: string;
+  options?: string[]; // array of strings (translations or source words), undefined for typing
   correctAnswer: string;
 }
