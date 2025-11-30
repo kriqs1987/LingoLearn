@@ -335,23 +335,28 @@ export function useWordBank() {
     ): Promise<{ successful: number; failed: number, errors: string[] }> => {
         if (!activeDictionary) throw new Error("No active dictionary selected.");
 
-        const blocks = examplesText.trim().split(/\n\s*\n/);
+        // Normalize newlines and split into non-empty lines
+        const lines = examplesText.replace(/\r\n/g, '\n').split('\n').map(l => l.trim()).filter(Boolean);
+        
         let successful = 0;
         let failed = 0;
         const errors: string[] = [];
         const addedWords: Word[] = [];
 
-        for (let i = 0; i < blocks.length; i++) {
-            const block = blocks[i];
-            const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-
-            if (lines.length !== 3) {
-                failed++;
-                errors.push(`Example ${i + 1}: Must contain exactly 3 non-empty lines. Found ${lines.length}.`);
-                continue;
+        // Process every 3 lines as one entry: Source Word, Translated Word, Example Sentence
+        for (let i = 0; i < lines.length; i += 3) {
+             // Check if we have a full group of 3
+            if (i + 2 >= lines.length) {
+                if (i < lines.length) {
+                    failed++;
+                    errors.push(`Entry starting at line ${i + 1} ("${lines[i]}"): Incomplete data. Expected 3 lines (Source, Translation, Example).`);
+                }
+                break;
             }
 
-            const [sourceWord, translatedWord, exampleSentence] = lines;
+            const sourceWord = lines[i];
+            const translatedWord = lines[i+1];
+            const exampleSentence = lines[i+2];
             
              if (activeDictionary.words.some(w => w.sourceWord.toLowerCase() === sourceWord.toLowerCase())) {
                 console.log(`Skipping duplicate example: ${sourceWord}`);
@@ -372,7 +377,7 @@ export function useWordBank() {
                 successful++;
             } catch (error: any) {
                  failed++;
-                 errors.push(`Example ${i + 1} ("${sourceWord}"): ${error.message || 'Invalid data.'}`);
+                 errors.push(`Entry "${sourceWord}": ${error.message || 'Invalid data.'}`);
             }
         }
         

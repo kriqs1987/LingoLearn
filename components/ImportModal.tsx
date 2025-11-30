@@ -171,18 +171,18 @@ const ImportModal: React.FC<ImportModalProps> = ({ dictionaryName, onClose, onIm
                             <div className="space-y-4">
                                 <div>
                                     <label htmlFor="example-list" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                        Paste full examples:
+                                        Paste data (3 lines per word):
                                     </label>
                                     <textarea
                                         id="example-list"
                                         value={examplesText}
                                         onChange={(e) => setExamplesText(e.target.value)}
                                         rows={8}
-                                        className="mt-1 block w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500"
-                                        placeholder="I need to book a flight.&#10;Muszę zarezerwować lot.&#10;I need to book a flight to Warsaw for the conference.&#10;&#10;Where is the nearest train station?&#10;Gdzie jest najbliższa stacja kolejowa?&#10;Excuse me, where is the nearest train station?"
+                                        className="mt-1 block w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-sky-500 focus:border-sky-500 font-mono text-sm"
+                                        placeholder="Apple&#10;Jabłko&#10;I eat an apple every day.&#10;Banana&#10;Banan&#10;This banana is very yellow."
                                     />
                                     <p className="text-xs text-slate-500 dark:text-slate-400 pt-2">
-                                        Format: 3 lines per example (source, translation, sentence), separated by a blank line. No AI is used.
+                                        Format: Contiguous lines in groups of 3 (Source, Translation, Example). No empty lines required between entries.
                                     </p>
                                 </div>
                             </div>
