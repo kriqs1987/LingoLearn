@@ -93,22 +93,28 @@ const App: React.FC = () => {
     }
   }, [addWord, activeDictionary]);
 
-  const handleStartQuiz = useCallback(() => {
+  const handleStartQuiz = useCallback((selectedMode: QuizMode | 'MIXED') => {
     const quizWords = getWordsForQuiz();
     if (quizWords.length > 0) {
       const questions: QuizQuestion[] = quizWords.map(wordToQuiz => {
-        // Randomly select a quiz mode
-        // 40% Chance: Select Translation (Source -> Target)
-        // 30% Chance: Select Source (Target -> Source)
-        // 30% Chance: Type Source (Target -> Source Typing)
-        const rand = Math.random();
         let mode: QuizMode;
-        if (rand < 0.4) {
-          mode = QuizMode.SELECT_TRANSLATION;
-        } else if (rand < 0.7) {
-          mode = QuizMode.SELECT_SOURCE;
+
+        if (selectedMode === 'MIXED') {
+            // Randomly select a quiz mode if Mixed is chosen
+            // 40% Chance: Select Translation (Source -> Target)
+            // 30% Chance: Select Source (Target -> Source)
+            // 30% Chance: Type Source (Target -> Source Typing)
+            const rand = Math.random();
+            if (rand < 0.4) {
+              mode = QuizMode.SELECT_TRANSLATION;
+            } else if (rand < 0.7) {
+              mode = QuizMode.SELECT_SOURCE;
+            } else {
+              mode = QuizMode.TYPE_SOURCE;
+            }
         } else {
-          mode = QuizMode.TYPE_SOURCE;
+            // Use the specifically selected mode
+            mode = selectedMode;
         }
 
         let questionText = '';
@@ -122,7 +128,7 @@ const App: React.FC = () => {
              const distractors = words
                 .filter(w => w.id !== wordToQuiz.id)
                 .map(w => w.translatedWord);
-             const uniqueDistractors = Array.from(new Set(distractors));
+             const uniqueDistractors: string[] = Array.from(new Set(distractors));
              const shuffledDistractors = shuffleArray(uniqueDistractors).slice(0, 3);
              options = shuffleArray([correctAnswer, ...shuffledDistractors]);
 
@@ -133,7 +139,7 @@ const App: React.FC = () => {
              const distractors = words
                 .filter(w => w.id !== wordToQuiz.id)
                 .map(w => w.sourceWord);
-             const uniqueDistractors = Array.from(new Set(distractors));
+             const uniqueDistractors: string[] = Array.from(new Set(distractors));
              const shuffledDistractors = shuffleArray(uniqueDistractors).slice(0, 3);
              options = shuffleArray([correctAnswer, ...shuffledDistractors]);
         } else {
