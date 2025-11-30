@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { QuizQuestion, QuizMode } from '../types';
-import { CheckIcon, XIcon } from './Icons';
+import { CheckIcon, XIcon, ArrowDownTrayIcon } from './Icons';
 
 interface QuizViewProps {
   quizQuestions: QuizQuestion[];
@@ -15,27 +15,46 @@ const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+function shuffleArray<T>(array: T[]): T[] {
+    return [...array].sort(() => Math.random() - 0.5);
+}
+
 const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnswer }) => {
+  const [shuffledQuestions, setShuffledQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answerState, setAnswerState] = useState<AnswerState>('unanswered');
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [typedAnswer, setTypedAnswer] = useState('');
   const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const currentQuestion = quizQuestions[currentQuestionIndex];
+  // Initialize shuffled questions on mount
+  useEffect(() => {
+    setShuffledQuestions(shuffleArray([...quizQuestions]));
+    setCurrentQuestionIndex(0);
+    setCorrectAnswers(0);
+    setQuestionsAnswered(0);
+  }, [quizQuestions]);
 
+  const currentQuestion = shuffledQuestions[currentQuestionIndex];
+
+  // Reset state when question changes
   useEffect(() => {
     setAnswerState('unanswered');
     setSelectedAnswer(null);
     setTypedAnswer('');
     // Focus input automatically if it's a typing question
-    if (currentQuestion.mode === QuizMode.TYPE_SOURCE) {
+    if (currentQuestion?.mode === QuizMode.TYPE_SOURCE) {
         setTimeout(() => {
             inputRef.current?.focus();
         }, 100);
     }
-  }, [currentQuestionIndex, currentQuestion.mode]);
+  }, [currentQuestionIndex, currentQuestion]);
+
+  const handleFinishClick = () => {
+      onFinishQuiz({ correct: correctAnswers, total: questionsAnswered });
+  };
 
   const handleAnswerClick = (option: string) => {
     if (answerState !== 'unanswered') return;
@@ -49,6 +68,8 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
   };
 
   const processAnswer = (answer: string) => {
+      if (!currentQuestion) return;
+
       // Normalize answer for comparison (trim whitespace and lowercase)
       const normalize = (s: string) => s.trim().toLowerCase();
       const isCorrect = normalize(answer) === normalize(currentQuestion.correctAnswer);
@@ -61,19 +82,23 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
       } else {
           setAnswerState('incorrect');
       }
+      setQuestionsAnswered(prev => prev + 1);
 
       onAnswer(currentQuestion.word.id, isCorrect);
 
       setTimeout(() => {
-          if (currentQuestionIndex < quizQuestions.length - 1) {
+          // Infinite loop logic: move to next, if end of array, reshuffle and restart
+          if (currentQuestionIndex < shuffledQuestions.length - 1) {
               setCurrentQuestionIndex(prev => prev + 1);
           } else {
-              onFinishQuiz({ correct: correctAnswers + (isCorrect ? 1 : 0), total: quizQuestions.length });
+              setShuffledQuestions(prev => shuffleArray([...prev]));
+              setCurrentQuestionIndex(0);
           }
       }, 2000);
   };
   
   const getButtonClass = (option: string) => {
+    if (!currentQuestion) return '';
     if (answerState === 'unanswered') {
       return 'bg-white dark:bg-slate-700 hover:bg-sky-100 dark:hover:bg-slate-600';
     }
@@ -86,26 +111,21 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
     return 'bg-white dark:bg-slate-700 opacity-50 cursor-not-allowed';
   };
 
-  // Helper to mask the source word in the example sentence if we are testing for the source word
   const getDisplayExample = () => {
-      if (!currentQuestion.word.exampleSentence) return null;
+      if (!currentQuestion?.word.exampleSentence) return null;
 
       if (currentQuestion.mode === QuizMode.SELECT_TRANSLATION) {
-          // Normal mode (Apple -> Jabłko): Show full sentence "I eat an apple"
           return currentQuestion.word.exampleSentence;
       } else {
-          // Reverse modes (Jabłko -> Apple): Mask "apple" in "I eat an apple"
           const sentence = currentQuestion.word.exampleSentence;
           const wordToMask = escapeRegExp(currentQuestion.word.sourceWord);
-          
-          // Create a regex to replace the word case-insensitively
-          // \b checks for word boundaries to avoid replacing substrings (e.g. "cat" in "category")
           const regex = new RegExp(`\\b${wordToMask}\\b`, 'gi');
           return sentence.replace(regex, '______');
       }
   };
 
   const getQuestionInstruction = () => {
+      if (!currentQuestion) return "";
       switch (currentQuestion.mode) {
           case QuizMode.SELECT_TRANSLATION:
               return "Select the translation for:";
@@ -118,21 +138,35 @@ const QuizView: React.FC<QuizViewProps> = ({ quizQuestions, onFinishQuiz, onAnsw
       }
   };
 
+  if (!currentQuestion) return <div className="p-10 text-center">Loading...</div>;
+
   const isTypingMode = currentQuestion.mode === QuizMode.TYPE_SOURCE;
   const displayExample = getDisplayExample();
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl space-y-8">
-      <div className="text-center">
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Question {currentQuestionIndex + 1} of {quizQuestions.length}</p>
-        <div className="mt-4 w-full bg-slate-200 rounded-full h-2.5 dark:bg-slate-700">
-            <div className="bg-sky-500 h-2.5 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / quizQuestions.length) * 100}%` }}></div>
+    <div className="w-full max-w-2xl mx-auto p-4 md:p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl space-y-8 relative">
+      <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-4">
+        <div className="flex gap-4">
+            <div>
+                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Score</p>
+                 <p className="text-xl font-bold text-green-500">{correctAnswers}</p>
+            </div>
+            <div>
+                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Reviewed</p>
+                 <p className="text-xl font-bold text-sky-500">{questionsAnswered}</p>
+            </div>
         </div>
+        <button 
+            onClick={handleFinishClick}
+            className="text-sm font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 px-3 py-1.5 rounded transition"
+        >
+            Finish Quiz
+        </button>
       </div>
 
       <div className="text-center space-y-2">
         <p className="text-lg text-slate-600 dark:text-slate-300">{getQuestionInstruction()}</p>
-        <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-4">{currentQuestion.questionText}</h2>
+        <h2 className="text-4xl md:text-5xl font-bold text-slate-800 dark:text-white mb-4 break-words">{currentQuestion.questionText}</h2>
         {displayExample && (
             <p className="text-lg text-slate-500 dark:text-slate-400 italic font-serif bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg inline-block">
                 "{displayExample}"

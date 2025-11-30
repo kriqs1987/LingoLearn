@@ -180,13 +180,15 @@ export function useWordBank() {
 
   const getWordsForQuiz = useCallback(() => {
     if (!activeDictionary) return [];
+    // Sort words by mastery level (lowest first) and then by last reviewed (oldest first)
     const sortedWords = [...activeDictionary.words].sort((a, b) => {
       if (a.masteryLevel !== b.masteryLevel) return a.masteryLevel - b.masteryLevel;
       if (!a.lastReviewed) return -1;
       if (!b.lastReviewed) return 1;
       return new Date(a.lastReviewed).getTime() - new Date(b.lastReviewed).getTime();
     });
-    return sortedWords.slice(0, QUIZ_SESSION_LENGTH);
+    // Return all words for the infinite quiz loop
+    return sortedWords;
   }, [activeDictionary]);
 
   const importWords = useCallback(async (
