@@ -59,6 +59,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <option value={QuizMode.SELECT_TRANSLATION}>Select Translation ({activeDictionary.sourceLanguage} → {activeDictionary.targetLanguage})</option>
                             <option value={QuizMode.SELECT_SOURCE}>Select Source ({activeDictionary.targetLanguage} → {activeDictionary.sourceLanguage})</option>
                             <option value={QuizMode.TYPE_SOURCE}>Type Source ({activeDictionary.targetLanguage} → Type {activeDictionary.sourceLanguage})</option>
+                            <option value={QuizMode.SPEED_CHALLENGE}>⚡ Speed Challenge (Game Mode)</option>
                         </select>
 
                         <button

@@ -27,6 +27,7 @@ export enum QuizMode {
   SELECT_TRANSLATION = 'SELECT_TRANSLATION', // Show source, choose translation
   SELECT_SOURCE = 'SELECT_SOURCE',           // Show translation, choose source
   TYPE_SOURCE = 'TYPE_SOURCE',               // Show translation, type source
+  SPEED_CHALLENGE = 'SPEED_CHALLENGE',       // Game mode: Timer, Source -> Translation
 }
 
 export interface QuizQuestion {

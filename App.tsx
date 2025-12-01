@@ -121,7 +121,8 @@ const App: React.FC = () => {
         let options: string[] | undefined;
         let correctAnswer = '';
 
-        if (mode === QuizMode.SELECT_TRANSLATION) {
+        if (mode === QuizMode.SELECT_TRANSLATION || mode === QuizMode.SPEED_CHALLENGE) {
+             // For both Standard Translation and Speed Challenge
              questionText = wordToQuiz.sourceWord;
              correctAnswer = wordToQuiz.translatedWord;
              
